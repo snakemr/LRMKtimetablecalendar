@@ -1,0 +1,12 @@
+<resources>
+    <string name="app_name">LRMK timetable calendar</string>
+    <string name="title_home">Home</string>
+    <string name="title_groups">Groups</string>
+    <string name="title_teachers">Teachers</string>
+    <string name="text_get">Get timetable for:</string>
+    <string name="when_manually">manually only</string>
+    <string name="when_weekly">weekly on Sunday, 17:00</string>
+    <string name="when_daily">daily at 17:00</string>
+    <string name="when_often">before every pair</string>
+    <string name="text_put">and add it to calendar:</string>
+</resources>

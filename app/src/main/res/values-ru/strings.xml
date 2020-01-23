@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Расписание ЛРМК</string>
+    <string name="text_get">Я хочу получать расписание для:</string>
+    <string name="title_groups">Список групп</string>
+    <string name="title_home">Расписание</string>
+    <string name="title_teachers">Преподаватель</string>
+    <string name="when_daily">каждый день в 17:00</string>
+    <string name="when_weekly">каждое воскресенье в 17:00</string>
+    <string name="when_manually">только вручную</string>
+    <string name="when_often">за 20 минут до каждой пары</string>
+    <string name="text_put">и добавлять в свой календарь:</string>
+</resources>
