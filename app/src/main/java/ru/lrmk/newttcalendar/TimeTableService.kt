@@ -19,8 +19,8 @@ import java.nio.charset.Charset
 
 class TimeTableService : Service() {
     val CHANNEL_ID = "LRMK_TIMETABLE"
-    val CHANNEL_NAME = "LRMK TimeTable"
-    val CHANNEL_DESCRIPTION = "Import timetable to calendar"
+    //val CHANNEL_NAME = "LRMK TimeTable"
+    //val CHANNEL_DESCRIPTION = "Import timetable to calendar"
     val NOTIFY_ID = 101
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -37,8 +37,8 @@ class TimeTableService : Service() {
 
             val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, NotificationManager.IMPORTANCE_DEFAULT)
-                channel.description = CHANNEL_DESCRIPTION
+                val channel = NotificationChannel(CHANNEL_ID, CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
+                //channel.description = CHANNEL_DESCRIPTION
                 channel.enableLights(true)
                 channel.lightColor = Color.RED
                 channel.enableVibration(false)
@@ -56,9 +56,7 @@ class TimeTableService : Service() {
         return super.onStartCommand(intent, flags, startId)
     }
 
-    override fun onBind(intent: Intent): IBinder {
-        TODO("Return the communication channel to the service.")
-    }
+    override fun onBind(intent: Intent): IBinder? = null
 
     override fun onDestroy() {
         Log.i("SERVICETT", "STOP!")

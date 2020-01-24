@@ -64,7 +64,7 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
             val current = it.find { it.id==prefs.getLong(calendar, -1) }
             current?.let { calendars.checked = current.name }
             calendars.notifyDataSetChanged()
-
+            if (it.size > 1 || it[0].id > 0) setAlarms()
         })
         return root
     }
@@ -121,8 +121,9 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
         activity!!.startService(Intent(activity, SetAlarmService::class.java))
     }
 
-    fun updateNow(v: View){
+    fun updateNow(@Suppress("UNUSED_PARAMETER")v: View){
         activity!!.startService(Intent(activity, TimeTableService::class.java))
+        //setAlarms()
 
         /*
         val CHANNEL_ID = "MyChan"
