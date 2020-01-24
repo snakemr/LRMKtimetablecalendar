@@ -38,12 +38,12 @@ class SetAlarmService : Service() {
             var interval = AlarmManager.INTERVAL_DAY
             val calendar = Calendar.getInstance()
 
-            Log.i("SERVICETT","TIME1 $calendar")
+            Log.i("SERVICETT","TIME1 $time1 $calendar ${interval / 3600000}")
             val alarms = if (period==3) 7 else 1
             for (alarm in 1..alarms) {
                 val pending = PendingIntent.getService(applicationContext, alarm, intentt, 0)
 
-                calendar.setTimeInMillis(time)
+                calendar.setTimeInMillis(time1)
                 if (period == 1) {
                     calendar.set(Calendar.DAY_OF_WEEK, 1)
                     interval = 7 * AlarmManager.INTERVAL_DAY
@@ -52,6 +52,7 @@ class SetAlarmService : Service() {
                 if (period==3) {
                     calendar.set(Calendar.HOUR_OF_DAY, times[0][alarm-1])
                     calendar.set(Calendar.MINUTE, times[1][alarm-1])
+                    calendar.add(Calendar.MINUTE, (0..9).random())
                 }  else {
                     calendar.set(Calendar.HOUR_OF_DAY, 17)
                     calendar.set(Calendar.MINUTE, (0..59).random())
@@ -62,7 +63,7 @@ class SetAlarmService : Service() {
                     calendar.add( if (period == 1) Calendar.WEEK_OF_MONTH else Calendar.DAY_OF_WEEK, 1 )
                     time = calendar.timeInMillis
                 }
-                Log.i("SERVICETT","TIME $calendar ${(time - time1) / 3600000} ${interval / 3600000}")
+                Log.i("SERVICETT","TIME2 $time $calendar ${(time - time1) / 3600000}")
 
                 manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, time, interval, pending)
                 //Log.i("SERVICETT", "SET $manager $intent $pending")
