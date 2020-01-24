@@ -1,5 +1,6 @@
 package ru.lrmk.newttcalendar.ui.home
 
+import android.content.Intent
 import android.content.SharedPreferences
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -11,14 +12,10 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
-import androidx.navigation.NavOptions
 import androidx.navigation.findNavController
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
-import ru.lrmk.newttcalendar.Calendar
-import ru.lrmk.newttcalendar.R
-import ru.lrmk.newttcalendar.SimpleCheckListAdapter
-import ru.lrmk.newttcalendar.SimpleRadioListAdapter
+import ru.lrmk.newttcalendar.*
 
 
 class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
@@ -92,8 +89,9 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
             adapter.checked.add(item)
             set.add(name)
         }
-        prefs.edit().putStringSet(pref, set).commit()
+        prefs.edit().putStringSet(pref, set).apply()
         adapter.notifyDataSetChanged()
+        setAlarms()
     }
 
     override fun onProgressChanged(seek: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -103,7 +101,10 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
             3 -> R.string.when_often
             else -> R.string.when_manually
         })
-        if (fromUser) prefs.edit().putInt(period, progress).commit()
+        if (fromUser) {
+            prefs.edit().putInt(period, progress).apply()
+            setAlarms()
+        }
     }
     override fun onStartTrackingTouch(p0: SeekBar?) {}
     override fun onStopTrackingTouch(p0: SeekBar?) {}
@@ -111,11 +112,51 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
     fun onClick(item: Calendar) {
         if (item.id == 0L) return
         calendars.checked = item.name
-        prefs.edit().putLong(calendar, item.id).commit()
+        prefs.edit().putLong(calendar, item.id).apply()
         calendars.notifyDataSetChanged()
+        setAlarms()
+    }
+
+    fun setAlarms() {
+        activity!!.startService(Intent(activity, SetAlarmService::class.java))
     }
 
     fun updateNow(v: View){
+        activity!!.startService(Intent(activity, TimeTableService::class.java))
 
+        /*
+        val CHANNEL_ID = "MyChan"
+        val NOTIFY_ID = 101
+        val notificationManager = context!!.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, "My channel", NotificationManager.IMPORTANCE_DEFAULT)
+            channel.description = "My channel description"
+            channel.enableLights(true)
+            channel.lightColor = Color.RED
+            channel.enableVibration(false)
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val builder = NotificationCompat.Builder(activity as AppCompatActivity, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_school_black_24dp)
+            .setContentTitle("Напоминание")
+            .setContentText("Пора покормить кота")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+
+        notificationManager.notify(NOTIFY_ID, builder.build())
+        */
+        /*
+        val manager = context!!.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val calendar = java.util.Calendar.getInstance()
+        calendar.setTimeInMillis(System.currentTimeMillis())
+        calendar.add(java.util.Calendar.SECOND, 1)
+        val time = calendar.timeInMillis
+
+        val intent = Intent(activity, TimeTableService::class.java)
+        //activity!!.startService(intent)
+        val pending = PendingIntent.getService(context, 1, intent, 0)
+        manager.set(AlarmManager.RTC_WAKEUP, time, pending)
+        Log.i("SERVICETT", "SET $manager $intent $pending")
+        */
     }
 }
