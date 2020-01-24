@@ -10,24 +10,32 @@ import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProviders
+import androidx.navigation.NavOptions
+import androidx.navigation.findNavController
 import androidx.preference.PreferenceManager
 import androidx.recyclerview.widget.RecyclerView
+import ru.lrmk.newttcalendar.Calendar
 import ru.lrmk.newttcalendar.R
 import ru.lrmk.newttcalendar.SimpleCheckListAdapter
-import ru.lrmk.newttcalendar.ui.dashboard.GroupsFragment
+import ru.lrmk.newttcalendar.SimpleRadioListAdapter
+
 
 class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
     private lateinit var homeViewModel: HomeViewModel
     private lateinit var prefs: SharedPreferences
     private lateinit var adapter: SimpleCheckListAdapter<String>
+    private lateinit var calendars: SimpleRadioListAdapter<Calendar>
     private lateinit var every: TextView
+    val choose = "Выберите группу или преподавателя"
     val group = "Группа "
     val groups = "groups"
     val teachers = "teachers"
+    val calendar = "calendar"
     val period = "period"
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         homeViewModel = ViewModelProviders.of(this).get(HomeViewModel::class.java)
+        homeViewModel.context = context!!
         prefs = PreferenceManager.getDefaultSharedPreferences(context)
         val root = inflater.inflate(R.layout.fragment_home, container, false)
 
@@ -37,9 +45,14 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
         val set = mutableSetOf<String>()
         if (set1 != null) set.addAll(set1.map { group+it } )
         if (set2 != null) set.addAll(set2)
+        if (set.size == 0) set.add(choose)
         adapter = SimpleCheckListAdapter(set.take(5).toList(), ::onClick)
         adapter.checked = set
         list.adapter = adapter
+
+        val cals = root.findViewById<RecyclerView>(R.id.calendars)
+        calendars = SimpleRadioListAdapter(listOf(), ::onClick)
+        cals.adapter = calendars
 
         every = root.findViewById(R.id.every)
         val seek = root.findViewById<SeekBar>(R.id.seekBar)
@@ -47,11 +60,21 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
         seek.progress = prefs.getInt(period, 2)
 
         homeViewModel.text.observe(this, Observer {
+            calendars.items = it
+            val current = it.find { it.id==prefs.getLong(calendar, -1) }
+            current?.let { calendars.checked = current.name }
+            calendars.notifyDataSetChanged()
+
         })
         return root
     }
 
     fun onClick(item: String) {
+        if (item == choose) {
+            val navController = activity!!.findNavController(R.id.nav_host_fragment)
+            navController.navigate(R.id.navigation_dashboard)
+            return
+        }
         var pref = teachers
         var name = item
         if (item.startsWith(group)) {
@@ -81,4 +104,11 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
     }
     override fun onStartTrackingTouch(p0: SeekBar?) {}
     override fun onStopTrackingTouch(p0: SeekBar?) {}
+
+    fun onClick(item: Calendar) {
+        if (item.id == 0L) return
+        calendars.checked = item.name
+        prefs.edit().putLong(calendar, item.id).commit()
+        calendars.notifyDataSetChanged()
+    }
 }
