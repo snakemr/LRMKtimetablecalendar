@@ -3,6 +3,7 @@ package ru.lrmk.newttcalendar
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.view.Window
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat

@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Button
 import android.widget.SeekBar
 import android.widget.TextView
 import androidx.fragment.app.Fragment
@@ -59,6 +60,8 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
         seek.setOnSeekBarChangeListener(this)
         seek.progress = prefs.getInt(period, 2)
 
+        root.findViewById<Button>(R.id.button_now).setOnClickListener(::updateNow)
+
         homeViewModel.text.observe(this, Observer {
             calendars.items = it
             val current = it.find { it.id==prefs.getLong(calendar, -1) }
@@ -81,7 +84,7 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
             pref = groups
             name = item.replace(group,"")
         }
-        var set = prefs.getStringSet(pref, setOf())!!.toMutableSet()
+        val set = prefs.getStringSet(pref, setOf())!!.toMutableSet()
         if (adapter.checked.contains(item)) {
             adapter.checked.remove(item)
             set.remove(name)
@@ -110,5 +113,9 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
         calendars.checked = item.name
         prefs.edit().putLong(calendar, item.id).commit()
         calendars.notifyDataSetChanged()
+    }
+
+    fun updateNow(v: View){
+
     }
 }
