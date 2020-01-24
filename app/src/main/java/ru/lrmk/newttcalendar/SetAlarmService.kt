@@ -16,6 +16,8 @@ import java.util.Calendar
 
 class SetAlarmService : Service() {
     private lateinit var prefs: SharedPreferences
+    private val times = arrayOf( intArrayOf( 8,  9, 11, 12, 14, 16, 17),
+                                 intArrayOf( 0, 30, 20, 50, 30,  0, 25) )
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
@@ -29,23 +31,42 @@ class SetAlarmService : Service() {
         if ( ( (groups!=null && groups.size>0) || (teachers!=null && teachers.size>0) ) && period>0)
         CoroutineScope(Dispatchers.Main).launch {
             val manager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-
-            val calendar = Calendar.getInstance()
-            calendar.setTimeInMillis(System.currentTimeMillis())
-            calendar.set(Calendar.DAY_OF_WEEK, 1)
-            calendar.set(Calendar.HOUR_OF_DAY, 14)
-            calendar.set(Calendar.MINUTE, (0..59).random())
-            //calendar.add(java.util.Calendar.WEEK_OF_MONTH, 1)
-            //calendar.add(java.util.Calendar.SECOND, 1)
-            val time = calendar.timeInMillis
-            Log.i("SERVICETT", "TIME $calendar ${(time-System.currentTimeMillis())/3600000}")
-
             val intentt = Intent(applicationContext, TimeTableService::class.java)
-            val pending = PendingIntent.getService(applicationContext, 1, intentt, 0)
 
-            //manager.set(AlarmManager.RTC_WAKEUP, time, pending)
-            manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, time, AlarmManager.INTERVAL_DAY, pending)
-            Log.i("SERVICETT", "SET $manager $intent $pending")
+            var time = System.currentTimeMillis()
+            val time1 = time
+            var interval = AlarmManager.INTERVAL_DAY
+            val calendar = Calendar.getInstance()
+
+            Log.i("SERVICETT","TIME1 $calendar")
+            val alarms = if (period==3) 7 else 1
+            for (alarm in 1..alarms) {
+                val pending = PendingIntent.getService(applicationContext, alarm, intentt, 0)
+
+                calendar.setTimeInMillis(time)
+                if (period == 1) {
+                    calendar.set(Calendar.DAY_OF_WEEK, 1)
+                    interval = 7 * AlarmManager.INTERVAL_DAY
+                }
+
+                if (period==3) {
+                    calendar.set(Calendar.HOUR_OF_DAY, times[0][alarm-1])
+                    calendar.set(Calendar.MINUTE, times[1][alarm-1])
+                }  else {
+                    calendar.set(Calendar.HOUR_OF_DAY, 17)
+                    calendar.set(Calendar.MINUTE, (0..59).random())
+                }
+
+                time = calendar.timeInMillis
+                if (time < time1) {
+                    calendar.add( if (period == 1) Calendar.WEEK_OF_MONTH else Calendar.DAY_OF_WEEK, 1 )
+                    time = calendar.timeInMillis
+                }
+                Log.i("SERVICETT","TIME $calendar ${(time - time1) / 3600000} ${interval / 3600000}")
+
+                manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, time, interval, pending)
+                //Log.i("SERVICETT", "SET $manager $intent $pending")
+            }
 
             stopSelf(startId)
         }
