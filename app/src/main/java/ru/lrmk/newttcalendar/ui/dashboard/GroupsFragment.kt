@@ -32,11 +32,12 @@ class GroupsFragment : Fragment() {
 
         groupsViewModel.text.observe(this, Observer {
             val items = it.split("<br/>")
-            var groups = mutableListOf<Group>()
+            val groups = mutableListOf<Group>()
             if (items.size==1) {
                 groups.add(Group(0, it))
             }
             else if (items.size>1) {
+                prefs.edit().putString("grouplist", it).apply()
                 for (i in 0 until items.size step 2)
                     if (items[i].length>0 && i+1<items.size)
                         groups.add(Group(items[i].toLong(), fromHTML(items[i+1])))

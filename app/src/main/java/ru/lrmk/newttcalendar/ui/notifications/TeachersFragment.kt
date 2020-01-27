@@ -31,11 +31,12 @@ class TeachersFragment : Fragment() {
 
         teachersViewModel.text.observe(this, Observer {
             val items = it.split("<br/>")
-            var teachers = mutableListOf<Teacher>()
+            val teachers = mutableListOf<Teacher>()
             if (items.size==1) {
                 teachers.add(Teacher(0, it))
             }
             else if (items.size>1) {
+                prefs.edit().putString("teacherlist", it).apply()
                 for (i in 0 until items.size step 2)
                     if (items[i].length>0 && i+1<items.size)
                         teachers.add(Teacher(items[i].toLong(), items[i + 1]))

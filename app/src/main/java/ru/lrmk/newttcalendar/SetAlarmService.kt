@@ -28,10 +28,15 @@ class SetAlarmService : Service() {
 
         Log.i("SERVICETT", "SET ALARMS ${flags} ${startId} $groups $teachers $period $calend")
 
-        if ( ( (groups!=null && groups.size>0) || (teachers!=null && teachers.size>0) ) && period>0)
+        if ( ( (groups!=null && groups.size>0) || (teachers!=null && teachers.size>0) ) /*&& calend>0*/ || period==0)
         CoroutineScope(Dispatchers.Main).launch {
             val manager = applicationContext.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             val intentt = Intent(applicationContext, TimeTableService::class.java)
+
+            for (alarm in 1..7) {
+                val pending = PendingIntent.getService(applicationContext, alarm, intentt, 0)
+                manager.cancel(pending)
+            }
 
             var time = System.currentTimeMillis()
             val time1 = time
@@ -39,7 +44,7 @@ class SetAlarmService : Service() {
             val calendar = Calendar.getInstance()
 
             Log.i("SERVICETT","TIME1 $time1 $calendar ${interval / 3600000}")
-            val alarms = if (period==3) 7 else 1
+            val alarms = if (period==3) 7 else if (period>0) 1 else 0
             for (alarm in 1..alarms) {
                 val pending = PendingIntent.getService(applicationContext, alarm, intentt, 0)
 
@@ -60,15 +65,15 @@ class SetAlarmService : Service() {
 
                 time = calendar.timeInMillis
                 if (time < time1) {
-                    calendar.add( if (period == 1) Calendar.WEEK_OF_MONTH else Calendar.DAY_OF_WEEK, 1 )
+                    //calendar.add( if (period == 1) Calendar.WEEK_OF_MONTH else Calendar.DAY_OF_WEEK, 1 )
                     time = calendar.timeInMillis
                 }
+                interval = 5000L + alarm*5000
                 Log.i("SERVICETT","TIME2 $time $calendar ${(time - time1) / 3600000}")
 
                 manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, time, interval, pending)
                 //Log.i("SERVICETT", "SET $manager $intent $pending")
             }
-
             stopSelf(startId)
         }
         else stopSelf(startId)
