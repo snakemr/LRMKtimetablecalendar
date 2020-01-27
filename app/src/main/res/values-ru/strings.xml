@@ -5,10 +5,12 @@
     <string name="title_groups">Список групп</string>
     <string name="title_home">Расписание</string>
     <string name="title_teachers">Преподаватель</string>
-    <string name="when_daily">каждый день в 17:00</string>
-    <string name="when_weekly">каждое воскресенье в 17:00</string>
+    <string name="when_daily">каждый вечер после пяти</string>
+    <string name="when_weekly">каждое воскресенье после пяти вечера</string>
     <string name="when_manually">только вручную</string>
-    <string name="when_often">за 20 минут до каждой пары</string>
+    <string name="when_often">перед каждой парой</string>
     <string name="text_put">и добавлять в свой календарь:</string>
     <string name="text_now">Обновить сейчас</string>
+    <string name="week_next">на следующую неделю</string>
+    <string name="week_this">на эту неделю</string>
 </resources>

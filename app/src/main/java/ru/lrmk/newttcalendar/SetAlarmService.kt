@@ -50,7 +50,7 @@ class SetAlarmService : Service() {
 
                 calendar.setTimeInMillis(time1)
                 if (period == 1) {
-                    calendar.set(Calendar.DAY_OF_WEEK, 1)
+                    calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
                     interval = 7 * AlarmManager.INTERVAL_DAY
                 }
 
@@ -65,10 +65,10 @@ class SetAlarmService : Service() {
 
                 time = calendar.timeInMillis
                 if (time < time1) {
-                    //calendar.add( if (period == 1) Calendar.WEEK_OF_MONTH else Calendar.DAY_OF_WEEK, 1 )
+                    calendar.add( if (period == 1) Calendar.WEEK_OF_MONTH else Calendar.DAY_OF_WEEK, 1 )
                     time = calendar.timeInMillis
                 }
-                interval = 5000L + alarm*5000
+                //interval = 5000L + alarm*5000
                 Log.i("SERVICETT","TIME2 $time $calendar ${(time - time1) / 3600000}")
 
                 manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, time, interval, pending)

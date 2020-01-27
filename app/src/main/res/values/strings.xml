@@ -5,9 +5,11 @@
     <string name="title_teachers">Teachers</string>
     <string name="text_get">Get timetable for:</string>
     <string name="when_manually">manually only</string>
-    <string name="when_weekly">weekly on Sunday, 17:00</string>
-    <string name="when_daily">daily at 17:00</string>
+    <string name="when_weekly">weekly on Sunday, 17pm</string>
+    <string name="when_daily">daily after 17pm</string>
     <string name="when_often">before every pair</string>
     <string name="text_put">and add it to calendar:</string>
     <string name="text_now">Update now</string>
+    <string name="week_this">on this week</string>
+    <string name="week_next">on next week</string>
 </resources>

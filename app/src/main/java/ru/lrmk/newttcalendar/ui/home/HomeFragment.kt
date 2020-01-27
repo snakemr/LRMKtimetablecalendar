@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
 import android.widget.SeekBar
+import android.widget.Switch
 import android.widget.TextView
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Observer
@@ -30,6 +31,7 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
     val teachers = "teachers"
     val calendar = "calendar"
     val period = "period"
+    val switchweek = "week"
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
         homeViewModel = ViewModelProviders.of(this).get(HomeViewModel::class.java)
@@ -57,6 +59,22 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
         seek.setOnSeekBarChangeListener(this)
         seek.progress = prefs.getInt(period, 2)
 
+        root.findViewById<Switch>(R.id.switch_week).apply {
+            val week = prefs.getInt(switchweek, -1)
+            if (week<0) {
+                val time = System.currentTimeMillis()
+                val calendar = java.util.Calendar.getInstance()
+                calendar.setTimeInMillis(time)
+                calendar.set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.FRIDAY)
+                calendar.set(java.util.Calendar.HOUR_OF_DAY, 13)
+                calendar.set(java.util.Calendar.MINUTE, 0)
+                isChecked = calendar.timeInMillis < time
+            }
+            else
+                isChecked = week > 0
+            if (isChecked) setText(R.string.week_next)
+            setOnClickListener(::weekClick)
+        }
         root.findViewById<Button>(R.id.button_now).setOnClickListener(::updateNow)
 
         homeViewModel.text.observe(this, Observer {
@@ -122,42 +140,15 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
     }
 
     fun updateNow(@Suppress("UNUSED_PARAMETER")v: View){
-        activity!!.startService(Intent(activity, TimeTableService::class.java))
-        //setAlarms()
-
-        /*
-        val CHANNEL_ID = "MyChan"
-        val NOTIFY_ID = 101
-        val notificationManager = context!!.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "My channel", NotificationManager.IMPORTANCE_DEFAULT)
-            channel.description = "My channel description"
-            channel.enableLights(true)
-            channel.lightColor = Color.RED
-            channel.enableVibration(false)
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val builder = NotificationCompat.Builder(activity as AppCompatActivity, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_school_black_24dp)
-            .setContentTitle("Напоминание")
-            .setContentText("Пора покормить кота")
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-
-        notificationManager.notify(NOTIFY_ID, builder.build())
-        */
-        /*
-        val manager = context!!.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val calendar = java.util.Calendar.getInstance()
-        calendar.setTimeInMillis(System.currentTimeMillis())
-        calendar.add(java.util.Calendar.SECOND, 1)
-        val time = calendar.timeInMillis
-
         val intent = Intent(activity, TimeTableService::class.java)
-        //activity!!.startService(intent)
-        val pending = PendingIntent.getService(context, 1, intent, 0)
-        manager.set(AlarmManager.RTC_WAKEUP, time, pending)
-        Log.i("SERVICETT", "SET $manager $intent $pending")
-        */
+        intent.putExtra(switchweek, prefs.getInt(switchweek, -1))
+        activity!!.startService(intent)
+    }
+
+    fun weekClick(v: View){
+        if (v is Switch) {
+            v.setText(if (v.isChecked) R.string.week_next else R.string.week_this)
+            prefs.edit().putInt(switchweek, if (v.isChecked) 1 else 0).apply()
+        }
     }
 }
