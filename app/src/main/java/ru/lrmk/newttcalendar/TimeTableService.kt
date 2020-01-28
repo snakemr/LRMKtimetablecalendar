@@ -1,15 +1,20 @@
 package ru.lrmk.newttcalendar
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.IBinder
+import android.provider.CalendarContract
 import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import kotlinx.coroutines.*
 import java.io.IOException
@@ -40,11 +45,43 @@ class TimeTableService : Service() {
         Log.i("SERVICETT", "START! ${flags} ${startId}")
         CoroutineScope(Dispatchers.IO).launch process@{
             prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+            val calend = prefs.getLong("calendar", 0)
             var groups = prefs.getString(grouplist, "")!!
             var teachers = prefs.getString(teacherlist, "")!!
             var pairs = prefs.getString(pairlist, "")!!
             var rooms = prefs.getString(roomlist, "")!!
             var week = intent?.getIntExtra(switchweek, -1) ?: -1
+            var reset = false
+
+            if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED
+                || calend == 10000L) {
+                stopSelf(startId)
+                return@process
+            }
+
+            val time = System.currentTimeMillis()
+            val calendar = Calendar.getInstance()
+            calendar.setTimeInMillis(time)
+            if (week<0) {
+                calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+                calendar.set(Calendar.HOUR_OF_DAY, 17)
+                calendar.set(Calendar.MINUTE, 0)
+                calendar.set(Calendar.SECOND, 0)
+                if (calendar.timeInMillis < time) reset = true
+
+                calendar.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY)
+                calendar.set(Calendar.HOUR_OF_DAY, 13)
+                week = if (calendar.timeInMillis < time) 1 else 0
+            }
+            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            if (week>0) calendar.add(Calendar.WEEK_OF_MONTH, 1)
+            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
+            val monday = sdf.format(calendar.time)
+
+            if (reset) {
+                groups = ""; teachers=""; pairs=""; rooms=""
+                Log.i("SERVICETT", "RESET LISTS")
+            }
 
             val g = if (groups=="")
                 async {
@@ -84,22 +121,8 @@ class TimeTableService : Service() {
             val rms = getList(rooms)
             val prs = pairs.split(br).filter { it!="" }.map {
                 val pair = it.split(',')
-                Pair(pair[0].toInt(), pair[1])
+                Triple(pair[0].toInt(), pair[1], pair[2])
             }
-
-            val time = System.currentTimeMillis()
-            val calendar = Calendar.getInstance()
-            calendar.setTimeInMillis(time)
-            if (week<0) {
-                calendar.set(Calendar.DAY_OF_WEEK, Calendar.FRIDAY)
-                calendar.set(Calendar.HOUR_OF_DAY, 13)
-                calendar.set(Calendar.MINUTE, 0)
-                week = if (calendar.timeInMillis < time) 1 else 0
-            }
-            calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-            if (week>0) calendar.add(Calendar.WEEK_OF_MONTH, 1)
-            val sdf = SimpleDateFormat("yyyy-MM-dd", Locale.ROOT)
-            val monday = sdf.format(calendar.time)
 
             val myGroups = prefs.getStringSet("groups", setOf())!!.take(5)
             val myTeachers = prefs.getStringSet("teachers", setOf())!!.take(5-myGroups.size)
@@ -117,7 +140,7 @@ class TimeTableService : Service() {
                             URL("https://www.lrmk.ru/tt/timetable?g=$it&w=$monday").readText()
                         } catch (e: IOException) {""}
                     })
-                    val git = prefs.getString("g$it", "")!!
+                    val git = if (reset) "" else prefs.getString("g$it", "")!!
                     if (git == "")
                         disc.add(async {
                             try {
@@ -137,7 +160,7 @@ class TimeTableService : Service() {
                             URL("https://www.lrmk.ru/tt/timetable?t=$it&w=$monday").readText()
                         } catch (e: IOException) {""}
                     })
-                    val tit = prefs.getString("t$it", "")!!
+                    val tit = if (reset) "" else prefs.getString("t$it", "")!!
                     if (tit == "")
                         disc.add(async {
                             try {
@@ -167,6 +190,29 @@ class TimeTableService : Service() {
             val ttt = tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
                 val d =  dscs.firstOrNull{ it.first==items[3] }
+                val gr = grps.firstOrNull { it.first == d?.second }?.second ?: ""
+
+                val values = ContentValues()
+                calendar.set(Calendar.DAY_OF_WEEK, (items[0] ?: 1) % 7 + 1)
+
+                val begin = (prs.firstOrNull{ it.first==items[1] }?.second ?: "0:0").split(':').map { it.toIntOrNull() }
+                begin[0]?.let { calendar.set(Calendar.HOUR_OF_DAY, it) }
+                begin[1]?.let { calendar.set(Calendar.MINUTE, it) }
+                values.put(CalendarContract.Events.DTSTART, calendar.timeInMillis)
+
+                val end = (prs.firstOrNull{ it.first==items[1] }?.second ?: "0:0").split(':').map { it.toIntOrNull() }
+                end[0]?.let { calendar.set(Calendar.HOUR_OF_DAY, it) }
+                end[1]?.let { calendar.set(Calendar.MINUTE, it) }
+                values.put(CalendarContract.Events.DTEND, calendar.timeInMillis)
+
+                values.put(CalendarContract.Events.TITLE, gr)
+                values.put(CalendarContract.Events.DESCRIPTION, d?.third ?: "")
+                values.put(CalendarContract.Events.CALENDAR_ID, calend)
+                values.put(CalendarContract.Events.EVENT_TIMEZONE, "Europe/Moscow")
+                Log.i("SERVICETT", "$values")
+                //if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED)
+                contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
+
                 listOf(
                     items[0],
                     prs.firstOrNull{ it.first==items[1] }?.second ?: "",
