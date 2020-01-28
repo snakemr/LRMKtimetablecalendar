@@ -190,11 +190,11 @@ class TimeTableService : Service() {
 
             //calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
             calendar.set(Calendar.HOUR_OF_DAY, 4)
-            val timeFrom = calendar.timeInMillis
+            val timeFrom = calendar.timeInMillis.toString()
             calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
             calendar.set(Calendar.HOUR_OF_DAY, 20)
-            val timeTo = calendar.timeInMillis
-            contentResolver.delete(CalendarContract.Events.CONTENT_URI, "DTSTART>? AND ", null)
+            val timeTo = calendar.timeInMillis.toString()
+            contentResolver.delete(CalendarContract.Events.CONTENT_URI, "DTSTART>? AND DTEND<?", arrayOf(timeFrom, timeTo))
 
             val ttt = tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
