@@ -50,6 +50,7 @@ class TimeTableService : Service() {
             var teachers = prefs.getString(teacherlist, "")!!
             var pairs = prefs.getString(pairlist, "")!!
             var rooms = prefs.getString(roomlist, "")!!
+            val manual = intent?.getBooleanExtra("manual", false) ?: false
             var week = intent?.getIntExtra(switchweek, -1) ?: -1
             var reset = false
 
@@ -187,6 +188,14 @@ class TimeTableService : Service() {
                 Triple(it.first, sec[0].toInt(), sec[1])
             }
 
+            //calendar.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            calendar.set(Calendar.HOUR_OF_DAY, 4)
+            val timeFrom = calendar.timeInMillis
+            calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+            calendar.set(Calendar.HOUR_OF_DAY, 20)
+            val timeTo = calendar.timeInMillis
+            contentResolver.delete(CalendarContract.Events.CONTENT_URI, "DTSTART>? AND ", null)
+
             val ttt = tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
                 val d =  dscs.firstOrNull{ it.first==items[3] }
@@ -200,13 +209,14 @@ class TimeTableService : Service() {
                 begin[1]?.let { calendar.set(Calendar.MINUTE, it) }
                 values.put(CalendarContract.Events.DTSTART, calendar.timeInMillis)
 
-                val end = (prs.firstOrNull{ it.first==items[1] }?.second ?: "0:0").split(':').map { it.toIntOrNull() }
+                val end = (prs.firstOrNull{ it.first==items[1] }?.third ?: "0:0").split(':').map { it.toIntOrNull() }
                 end[0]?.let { calendar.set(Calendar.HOUR_OF_DAY, it) }
                 end[1]?.let { calendar.set(Calendar.MINUTE, it) }
                 values.put(CalendarContract.Events.DTEND, calendar.timeInMillis)
 
                 values.put(CalendarContract.Events.TITLE, gr)
                 values.put(CalendarContract.Events.DESCRIPTION, d?.third ?: "")
+                values.put(CalendarContract.Events.EVENT_LOCATION, rms.firstOrNull{ it.first==items[6] }?.second ?: "")
                 values.put(CalendarContract.Events.CALENDAR_ID, calend)
                 values.put(CalendarContract.Events.EVENT_TIMEZONE, "Europe/Moscow")
                 Log.i("SERVICETT", "$values")

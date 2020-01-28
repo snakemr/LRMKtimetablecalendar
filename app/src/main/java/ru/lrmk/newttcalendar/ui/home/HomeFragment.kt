@@ -142,6 +142,7 @@ class HomeFragment : Fragment(), SeekBar.OnSeekBarChangeListener {
     fun updateNow(@Suppress("UNUSED_PARAMETER")v: View){
         val intent = Intent(activity, TimeTableService::class.java)
         intent.putExtra(switchweek, prefs.getInt(switchweek, -1))
+        intent.putExtra("manual", true)
         activity!!.startService(intent)
     }
 
