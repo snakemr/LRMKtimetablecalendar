@@ -180,7 +180,13 @@ class TimeTableService : Service() {
             dsc = disc.fold(dsc) { start, next -> start + next.await() }
             //Log.i("SERVICETT", "$dsc")
 
-            if (tt == prefs.getString(timetable, "")) {
+            val old = prefs.getString(timetable, "")!!
+            if (tt == ""  &&  old != "") {
+                stopSelf(startId)
+                notification("Не могу получить " + (if(week>0) "следующую" else "текущую") + " неделю с сервера 😟")
+                return@process
+            }
+            if (tt == old) {
                 Log.i("SERVICETT", "no changes, exiting")
                 if (manual) notification("Изменений расписания не обнаружено", false, manual)
                 stopSelf(startId)
@@ -206,7 +212,7 @@ class TimeTableService : Service() {
             val timeTo = calendar.timeInMillis.toString()
             contentResolver.delete(CalendarContract.Events.CONTENT_URI, "DTSTART>? AND DTEND<?", arrayOf(timeFrom, timeTo))
 
-            val ttt = tt.split(br).filter { it!="" }.map {
+            tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
                 val dscTriple =  dscs.firstOrNull{ it.first==items[3] }
                 val grp = grps.firstOrNull { it.first == dscTriple?.second }?.second ?: ""
