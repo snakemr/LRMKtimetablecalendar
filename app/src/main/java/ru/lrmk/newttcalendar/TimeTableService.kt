@@ -3,13 +3,10 @@ package ru.lrmk.newttcalendar
 import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
-import android.content.ContentValues
-import android.content.Context
-import android.content.Intent
-import android.content.SharedPreferences
+import android.content.*
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.IBinder
 import android.provider.CalendarContract
 import android.util.Log
@@ -38,6 +35,7 @@ class TimeTableService : Service() {
     val switchweek = "week"
     val br = "<br/>"
     val cp1251 = "cp1251"
+    val prefix = "Расписание ЛРМК: "
 
     private lateinit var prefs: SharedPreferences
 
@@ -56,6 +54,7 @@ class TimeTableService : Service() {
 
             if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED
                 || calend == 10000L) {
+                if (manual) notification("Календарь не выбран, или не получено рарешение")
                 stopSelf(startId)
                 return@process
             }
@@ -115,6 +114,7 @@ class TimeTableService : Service() {
 
             if (groups=="" || teachers=="" || pairs=="" || rooms=="") {
                 stopSelf(startId)
+                notification("Невозможно подключиться к серверу 😟")
                 return@process
             }
             val grps = getList(groups)
@@ -145,6 +145,7 @@ class TimeTableService : Service() {
                     if (git == "")
                         disc.add(async {
                             try {
+                                Log.i("SERVICETT", "https://www.lrmk.ru/tt/discplines?g=$it")
                                 val d = URL("https://www.lrmk.ru/tt/discplines?g=$it").readText(Charset.forName(cp1251))
                                 prefs.edit().putString("g$it", d).apply()
                                 d
@@ -165,7 +166,10 @@ class TimeTableService : Service() {
                     if (tit == "")
                         disc.add(async {
                             try {
-                                URL("https://www.lrmk.ru/tt/discplines?t=$it").readText(Charset.forName(cp1251))
+                                Log.i("SERVICETT", "https://www.lrmk.ru/tt/discplines?t=$it")
+                                val d = URL("https://www.lrmk.ru/tt/discplines?t=$it").readText(Charset.forName(cp1251))
+                                prefs.edit().putString("t$it", d).apply()
+                                d
                             } catch (e: IOException) {""}
                         })
                     else dsc += tit
@@ -178,7 +182,13 @@ class TimeTableService : Service() {
 
             if (tt == prefs.getString(timetable, "")) {
                 Log.i("SERVICETT", "no changes, exiting")
+                if (manual) notification("Изменений расписания не обнаружено", false, manual)
                 stopSelf(startId)
+                return@process
+            }
+            if (dsc=="") {
+                stopSelf(startId)
+                notification("Не могу получить перечень дисциплин 😟")
                 return@process
             }
             prefs.edit().putString(timetable, tt).apply()
@@ -198,8 +208,15 @@ class TimeTableService : Service() {
 
             val ttt = tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
-                val d =  dscs.firstOrNull{ it.first==items[3] }
-                val gr = grps.firstOrNull { it.first == d?.second }?.second ?: ""
+                val dscTriple =  dscs.firstOrNull{ it.first==items[3] }
+                val grp = grps.firstOrNull { it.first == dscTriple?.second }?.second ?: ""
+                val tea = (teas.firstOrNull{ it.first==items[4] }?.second ?: "") +
+                        (if (items[4]!=items[5])
+                            ", " + (teas.firstOrNull{ it.first==items[5] }?.second ?: "") else "")
+                val loc = (rms.firstOrNull{ it.first==items[6] }?.second ?: "") +
+                        (if (items[6]!=items[7])
+                            ", " + (rms.firstOrNull{ it.first==items[7] }?.second ?: "") else "")
+                val tit = (if(myTeachers.size>0) grp+' ' else "") + (dscTriple?.third ?: "")
 
                 val values = ContentValues()
                 calendar.set(Calendar.DAY_OF_WEEK, (items[0] ?: 1) % 7 + 1)
@@ -214,47 +231,68 @@ class TimeTableService : Service() {
                 end[1]?.let { calendar.set(Calendar.MINUTE, it) }
                 values.put(CalendarContract.Events.DTEND, calendar.timeInMillis)
 
-                values.put(CalendarContract.Events.TITLE, gr)
-                values.put(CalendarContract.Events.DESCRIPTION, d?.third ?: "")
-                values.put(CalendarContract.Events.EVENT_LOCATION, rms.firstOrNull{ it.first==items[6] }?.second ?: "")
+                values.put(CalendarContract.Events.TITLE, tit)
+                values.put(CalendarContract.Events.DESCRIPTION, prefix + grp + ' ' + tea)
+                values.put(CalendarContract.Events.EVENT_LOCATION, loc)
                 values.put(CalendarContract.Events.CALENDAR_ID, calend)
                 values.put(CalendarContract.Events.EVENT_TIMEZONE, "Europe/Moscow")
                 Log.i("SERVICETT", "$values")
-                //if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) == PackageManager.PERMISSION_GRANTED)
+
                 contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
 
                 listOf(
                     items[0],
                     prs.firstOrNull{ it.first==items[1] }?.second ?: "",
-                    grps.firstOrNull { it.first == d?.second }?.second ?: "",
-                    d?.third ?: "",
+                    grps.firstOrNull { it.first == dscTriple?.second }?.second ?: "",
+                    dscTriple?.third ?: "",
                     teas.firstOrNull{ it.first==items[4] }?.second ?: "",
                     if (items[4]!=items[5]) teas.firstOrNull{ it.first==items[5] }?.second ?: "" else "",
                     rms.firstOrNull{ it.first==items[6] }?.second ?: "",
                     if (items[6]!=items[7]) rms.firstOrNull{ it.first==items[7] }?.second ?: "" else ""
                 )
             }
-            Log.i("SERVICETT", "$ttt")
+            //Log.i("SERVICETT", "$ttt")
 
-            val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                val channel = NotificationChannel(CHANNEL_ID, CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
-                //channel.description = CHANNEL_DESCRIPTION
-                channel.enableLights(true)
-                channel.lightColor = Color.RED
-                channel.enableVibration(false)
-                notificationManager.createNotificationChannel(channel)
-            }
-            val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_school_black_24dp)
-                .setContentTitle("Расписание")
-                .setContentText(ttt.toString())
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-            notificationManager.notify(NOTIFY_ID, builder.build())
-
+            notification("Расписание на " + (if(week>0) "следующую" else "эту") + " неделю обновилось", false, manual)
             stopSelf(startId)
         }
         return super.onStartCommand(intent, flags, startId)
+    }
+
+    fun notification(massage: String, showMainActivity: Boolean = true, manual: Boolean = false) {
+        val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(CHANNEL_ID, CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
+            //channel.description = CHANNEL_DESCRIPTION
+            //channel.enableLights(true)
+            //channel.lightColor = Color.RED
+            channel.enableVibration(false)
+            notificationManager.createNotificationChannel(channel)
+        }
+        val notificationIntent = if (showMainActivity) {
+            Intent(applicationContext, MainActivity::class.java)
+        } else {
+            val intentBuilder = CalendarContract.CONTENT_URI.buildUpon()
+            intentBuilder.appendPath("time")
+            ContentUris.appendId(intentBuilder, System.currentTimeMillis())
+            Intent(Intent.ACTION_VIEW).setData(intentBuilder.build())
+        }
+        val contentIntent = PendingIntent.getActivity(applicationContext, 0,
+            notificationIntent, PendingIntent.FLAG_CANCEL_CURRENT)
+
+        val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Расписание ЛРМК")
+            .setContentText(massage)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setContentIntent(contentIntent)
+            .setAutoCancel(true)
+        if (!showMainActivity && !manual) {
+            val pendingIntent = PendingIntent.getActivity(applicationContext, 0,
+                Intent(applicationContext, MainActivity::class.java), PendingIntent.FLAG_CANCEL_CURRENT)
+            builder.addAction(R.drawable.ic_notification, "Настройки обновления", pendingIntent)
+        }
+        notificationManager.notify(NOTIFY_ID, builder.build())
     }
 
     fun getList(breakedString: String): List<Pair<Int, String>> {
