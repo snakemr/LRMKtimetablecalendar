@@ -185,8 +185,7 @@ class TimeTableService : Service() {
                 stopSelf(startId)
                 notification("Не могу получить " + (if(week>0) "следующую" else "текущую") + " неделю с сервера 😟")
                 return@process
-            }
-            if (tt == old) {
+            } else if (tt == old) {
                 Log.i("SERVICETT", "no changes, exiting")
                 if (manual) notification("Изменений расписания не обнаружено", false, manual)
                 stopSelf(startId)
@@ -210,7 +209,8 @@ class TimeTableService : Service() {
             calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
             calendar.set(Calendar.HOUR_OF_DAY, 20)
             val timeTo = calendar.timeInMillis.toString()
-            contentResolver.delete(CalendarContract.Events.CONTENT_URI, "DTSTART>? AND DTEND<?", arrayOf(timeFrom, timeTo))
+            contentResolver.delete(CalendarContract.Events.CONTENT_URI,
+                "DTSTART>? AND DTEND<? AND DESCRIPTION LIKE ?", arrayOf(timeFrom, timeTo, "'$prefix%'"))
 
             tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
