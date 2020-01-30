@@ -98,7 +98,7 @@ class TimeTableService : Service() {
             val p = if (pairs=="")
                 async {
                     try {
-                        URL("https://www.lrmk.ru/tt/pairs").readText()
+                        URL("https://www.lrmk.ru/tt/pairs1").readText()
                     } catch (e: IOException) {""}
                 } else null
             val r = if (rooms=="")
@@ -210,17 +210,17 @@ class TimeTableService : Service() {
             calendar.set(Calendar.HOUR_OF_DAY, 20)
             val timeTo = calendar.timeInMillis.toString()
             contentResolver.delete(CalendarContract.Events.CONTENT_URI,
-                "DTSTART>? AND DTEND<? AND DESCRIPTION LIKE ?", arrayOf(timeFrom, timeTo, "'$prefix%'"))
+                "DTSTART>? AND DTEND<? AND DESCRIPTION LIKE ?", arrayOf(timeFrom, timeTo, prefix+'%'))
 
             tt.split(br).filter { it!="" }.map {
                 val items = it.split(',').map { it.toIntOrNull() }
                 val dscTriple =  dscs.firstOrNull{ it.first==items[3] }
                 val grp = grps.firstOrNull { it.first == dscTriple?.second }?.second ?: ""
                 val tea = (teas.firstOrNull{ it.first==items[4] }?.second ?: "") +
-                        (if (items[4]!=items[5])
+                        (if (items[5]!=null && items[4]!=items[5])
                             ", " + (teas.firstOrNull{ it.first==items[5] }?.second ?: "") else "")
                 val loc = (rms.firstOrNull{ it.first==items[6] }?.second ?: "") +
-                        (if (items[6]!=items[7])
+                        (if (items[7]!=null && items[6]!=items[7])
                             ", " + (rms.firstOrNull{ it.first==items[7] }?.second ?: "") else "")
                 val tit = (if(myTeachers.size>0) grp+' ' else "") + (dscTriple?.third ?: "")
 
@@ -238,26 +238,14 @@ class TimeTableService : Service() {
                 values.put(CalendarContract.Events.DTEND, calendar.timeInMillis)
 
                 values.put(CalendarContract.Events.TITLE, tit)
-                values.put(CalendarContract.Events.DESCRIPTION, prefix + grp + ' ' + tea)
+                values.put(CalendarContract.Events.DESCRIPTION, prefix + grp + '\n' + tea)
                 values.put(CalendarContract.Events.EVENT_LOCATION, loc)
                 values.put(CalendarContract.Events.CALENDAR_ID, calend)
                 values.put(CalendarContract.Events.EVENT_TIMEZONE, "Europe/Moscow")
                 Log.i("SERVICETT", "$values")
 
                 contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
-
-                listOf(
-                    items[0],
-                    prs.firstOrNull{ it.first==items[1] }?.second ?: "",
-                    grps.firstOrNull { it.first == dscTriple?.second }?.second ?: "",
-                    dscTriple?.third ?: "",
-                    teas.firstOrNull{ it.first==items[4] }?.second ?: "",
-                    if (items[4]!=items[5]) teas.firstOrNull{ it.first==items[5] }?.second ?: "" else "",
-                    rms.firstOrNull{ it.first==items[6] }?.second ?: "",
-                    if (items[6]!=items[7]) rms.firstOrNull{ it.first==items[7] }?.second ?: "" else ""
-                )
             }
-            //Log.i("SERVICETT", "$ttt")
 
             notification("Расписание на " + (if(week>0) "следующую" else "эту") + " неделю обновилось", false, manual)
             stopSelf(startId)
