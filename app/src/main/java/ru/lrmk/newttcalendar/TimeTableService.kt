@@ -9,7 +9,6 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.os.IBinder
 import android.provider.CalendarContract
-import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
@@ -40,7 +39,7 @@ class TimeTableService : Service() {
     private lateinit var prefs: SharedPreferences
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.i("SERVICETT", "START! ${flags} ${startId}")
+        //Log.i("SERVICETT", "START! ${flags} ${startId}")
         CoroutineScope(Dispatchers.IO).launch process@{
             prefs = PreferenceManager.getDefaultSharedPreferences(applicationContext)
             val calend = prefs.getLong("calendar", 0)
@@ -53,7 +52,7 @@ class TimeTableService : Service() {
             var reset = false
 
             if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED
-                || calend == 10000L) {
+                || calend == 0L) {
                 if (manual) notification("Календарь не выбран, или не получено рарешение")
                 stopSelf(startId)
                 return@process
@@ -80,7 +79,7 @@ class TimeTableService : Service() {
 
             if (reset) {
                 groups = ""; teachers=""; pairs=""; rooms=""
-                Log.i("SERVICETT", "RESET LISTS")
+                //Log.i("SERVICETT", "RESET LISTS")
             }
 
             val g = if (groups=="")
@@ -129,7 +128,7 @@ class TimeTableService : Service() {
             val myTeachers = prefs.getStringSet("teachers", setOf())!!.take(5-myGroups.size)
             val iGroups = myGroups.map {gr -> grps.firstOrNull { it.second==gr }?.first}
             val iTeachers = myTeachers.map {tea -> teas.firstOrNull { it.second==tea }?.first}
-            Log.i("SERVICETT", "$myGroups g=$iGroups $myTeachers t=$iTeachers")
+            //Log.i("SERVICETT", "$myGroups g=$iGroups $myTeachers t=$iTeachers")
             val jobs = mutableListOf<Deferred<String>>()
             val disc = mutableListOf<Deferred<String>>()
             var dsc = ""
@@ -137,7 +136,7 @@ class TimeTableService : Service() {
                 it?.let {
                     jobs.add(async {
                         try {
-                            Log.i("SERVICETT", "https://www.lrmk.ru/tt/timetable?t=$it&w=$monday")
+                            //Log.i("SERVICETT", "https://www.lrmk.ru/tt/timetable?t=$it&w=$monday")
                             URL("https://www.lrmk.ru/tt/timetable?g=$it&w=$monday").readText()
                         } catch (e: IOException) {""}
                     })
@@ -145,7 +144,7 @@ class TimeTableService : Service() {
                     if (git == "")
                         disc.add(async {
                             try {
-                                Log.i("SERVICETT", "https://www.lrmk.ru/tt/discplines?g=$it")
+                                //Log.i("SERVICETT", "https://www.lrmk.ru/tt/discplines?g=$it")
                                 val d = URL("https://www.lrmk.ru/tt/discplines?g=$it").readText(Charset.forName(cp1251))
                                 prefs.edit().putString("g$it", d).apply()
                                 d
@@ -158,7 +157,7 @@ class TimeTableService : Service() {
                 it?.let {
                     jobs.add(async {
                         try {
-                            Log.i("SERVICETT", "https://www.lrmk.ru/tt/timetable?t=$it&w=$monday")
+                            //Log.i("SERVICETT", "https://www.lrmk.ru/tt/timetable?t=$it&w=$monday")
                             URL("https://www.lrmk.ru/tt/timetable?t=$it&w=$monday").readText()
                         } catch (e: IOException) {""}
                     })
@@ -166,7 +165,7 @@ class TimeTableService : Service() {
                     if (tit == "")
                         disc.add(async {
                             try {
-                                Log.i("SERVICETT", "https://www.lrmk.ru/tt/discplines?t=$it")
+                                //Log.i("SERVICETT", "https://www.lrmk.ru/tt/discplines?t=$it")
                                 val d = URL("https://www.lrmk.ru/tt/discplines?t=$it").readText(Charset.forName(cp1251))
                                 prefs.edit().putString("t$it", d).apply()
                                 d
@@ -186,7 +185,7 @@ class TimeTableService : Service() {
                 notification("Не могу получить " + (if(week>0) "следующую" else "текущую") + " неделю с сервера 😟")
                 return@process
             } else if (tt == old) {
-                Log.i("SERVICETT", "no changes, exiting")
+                //Log.i("SERVICETT", "no changes, exiting")
                 if (manual) notification("Изменений расписания не обнаружено", false, manual)
                 stopSelf(startId)
                 return@process
@@ -242,7 +241,7 @@ class TimeTableService : Service() {
                 values.put(CalendarContract.Events.EVENT_LOCATION, loc)
                 values.put(CalendarContract.Events.CALENDAR_ID, calend)
                 values.put(CalendarContract.Events.EVENT_TIMEZONE, "Europe/Moscow")
-                Log.i("SERVICETT", "$values")
+                //Log.i("SERVICETT", "$values")
 
                 contentResolver.insert(CalendarContract.Events.CONTENT_URI, values)
             }
@@ -300,8 +299,8 @@ class TimeTableService : Service() {
 
     override fun onBind(intent: Intent): IBinder? = null
 
-    override fun onDestroy() {
+    /*override fun onDestroy() {
         Log.i("SERVICETT", "STOP!")
         super.onDestroy()
-    }
+    }*/
 }

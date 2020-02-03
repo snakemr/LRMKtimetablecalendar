@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.os.IBinder
-import android.util.Log
 import androidx.preference.PreferenceManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -26,7 +25,7 @@ class SetAlarmService : Service() {
         val period = prefs.getInt("period", 0)
         val calend = prefs.getLong("calendar", 0)
 
-        Log.i("SERVICETT", "SET ALARMS ${flags} ${startId} $groups $teachers $period $calend")
+        //Log.i("SERVICETT", "SET ALARMS ${flags} ${startId} $groups $teachers $period $calend")
 
         if ( ( (groups!=null && groups.size>0) || (teachers!=null && teachers.size>0) ) /*&& calend>0*/ || period==0)
         CoroutineScope(Dispatchers.Main).launch {
@@ -43,7 +42,7 @@ class SetAlarmService : Service() {
             var interval = AlarmManager.INTERVAL_DAY
             val calendar = Calendar.getInstance()
 
-            Log.i("SERVICETT","TIME1 $time1 $calendar ${interval / 3600000}")
+            //Log.i("SERVICETT","TIME1 $time1 $calendar ${interval / 3600000}")
             val alarms = if (period==3) 7 else if (period>0) 1 else 0
             for (alarm in 1..alarms) {
                 val pending = PendingIntent.getService(applicationContext, alarm, intentt, 0)
@@ -69,7 +68,7 @@ class SetAlarmService : Service() {
                     time = calendar.timeInMillis
                 }
                 //interval = 5000L + alarm*5000
-                Log.i("SERVICETT","TIME2 $time $calendar ${(time - time1) / 3600000}")
+                //Log.i("SERVICETT","TIME2 $time $calendar ${(time - time1) / 3600000}")
 
                 manager.setInexactRepeating(AlarmManager.RTC_WAKEUP, time, interval, pending)
                 //Log.i("SERVICETT", "SET $manager $intent $pending")
@@ -83,8 +82,8 @@ class SetAlarmService : Service() {
 
     override fun onBind(intent: Intent): IBinder? = null
 
-    override fun onDestroy() {
+    /*override fun onDestroy() {
         Log.i("SERVICETT", "ALARMS SET, STOPPED")
         super.onDestroy()
-    }
+    }*/
 }
