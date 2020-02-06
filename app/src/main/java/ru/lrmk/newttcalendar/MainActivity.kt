@@ -1,9 +1,11 @@
 package ru.lrmk.newttcalendar
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.view.Window
+import android.widget.Toast
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -46,5 +48,16 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         val navController = findNavController(R.id.nav_host_fragment)
         navController.navigate(R.id.navigation_home, null, NavOptions.Builder().setPopUpTo(R.id.navigation_home, true).build())
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == TASK_CODE)
+            Toast.makeText(this, when (resultCode) {
+                STATUS_OK ->            "Расписание обновлено"
+                STATUS_NO_CHANGES ->    "Изменений нет"
+                STATUS_NO_PERMISSION -> "Выберите календарь"
+                else ->                 "Проблемы с подключением\uD83D\uDE1F"
+            }, Toast.LENGTH_SHORT).show()
     }
 }

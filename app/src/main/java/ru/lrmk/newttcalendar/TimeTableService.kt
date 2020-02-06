@@ -47,13 +47,17 @@ class TimeTableService : Service() {
             var teachers = prefs.getString(teacherlist, "")!!
             var pairs = prefs.getString(pairlist, "")!!
             var rooms = prefs.getString(roomlist, "")!!
-            val manual = intent?.getBooleanExtra("manual", false) ?: false
+            val manual = intent?.getBooleanExtra(PARAM_MANUAL, false) ?: false
+            val pending = if (manual) intent?.getParcelableExtra<PendingIntent>(PARAM_PINTENT) else null
             var week = intent?.getIntExtra(switchweek, -1) ?: -1
             var reset = false
 
             if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED
-                || calend == 0L) {
-                if (manual) notification("Календарь не выбран, или не получено рарешение")
+                || calend == 10L) {
+                if (manual) {
+                    notification("Календарь не выбран, или не получено рарешение")
+                    pending?.send(STATUS_NO_PERMISSION)
+                }
                 stopSelf(startId)
                 return@process
             }
@@ -114,6 +118,7 @@ class TimeTableService : Service() {
             if (groups=="" || teachers=="" || pairs=="" || rooms=="") {
                 stopSelf(startId)
                 notification("Невозможно подключиться к серверу 😟")
+                if (manual) pending?.send(STATUS_ERROR)
                 return@process
             }
             val grps = getList(groups)
@@ -183,16 +188,21 @@ class TimeTableService : Service() {
             if (tt == ""  &&  old != "") {
                 stopSelf(startId)
                 notification("Не могу получить " + (if(week>0) "следующую" else "текущую") + " неделю с сервера 😟")
+                if (manual) pending?.send(STATUS_ERROR)
                 return@process
             } else if (tt == old) {
                 //Log.i("SERVICETT", "no changes, exiting")
-                if (manual) notification("Изменений расписания не обнаружено", false, manual)
+                if (manual) {
+                    notification("Изменений расписания не обнаружено", false, manual)
+                    pending?.send(STATUS_NO_CHANGES)
+                }
                 stopSelf(startId)
                 return@process
             }
             if (dsc=="") {
                 stopSelf(startId)
                 notification("Не могу получить перечень дисциплин 😟")
+                if (manual) pending?.send(STATUS_ERROR)
                 return@process
             }
             prefs.edit().putString(timetable, tt).apply()
@@ -247,12 +257,13 @@ class TimeTableService : Service() {
             }
 
             notification("Расписание на " + (if(week>0) "следующую" else "эту") + " неделю обновилось", false, manual)
+            if (manual) pending?.send(STATUS_OK)
             stopSelf(startId)
         }
         return super.onStartCommand(intent, flags, startId)
     }
 
-    fun notification(massage: String, showMainActivity: Boolean = true, manual: Boolean = false) {
+    fun notification(message: String, showMainActivity: Boolean = true, manual: Boolean = false) {
         val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_ID, NotificationManager.IMPORTANCE_DEFAULT)
@@ -276,7 +287,7 @@ class TimeTableService : Service() {
         val builder = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Расписание ЛРМК")
-            .setContentText(massage)
+            .setContentText(message)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
