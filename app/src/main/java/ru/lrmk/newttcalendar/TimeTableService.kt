@@ -53,7 +53,7 @@ class TimeTableService : Service() {
             var reset = false
 
             if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.WRITE_CALENDAR) != PackageManager.PERMISSION_GRANTED
-                || calend == 10L) {
+                || calend == 0L) {
                 if (manual) {
                     notification("Календарь не выбран, или не получено рарешение")
                     pending?.send(STATUS_NO_PERMISSION)
